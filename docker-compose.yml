@@ -6,12 +6,14 @@ services:
     user: root
     environment:
       - HADOOP_HOME=/opt/hadoop
+      - HADOOP_PREFIX=/opt/hadoop  # esto es nuevo
+
     volumes:
       - ./hadoop_namenode:/opt/hadoop/data/nameNode
       - ./hadoop_config:/opt/hadoop/etc/hadoop
       - ./start-hdfs.sh:/start-hdfs.sh
     ports:
-      - "9870:9870"
+      - "9870:9870" #intefez web de hdfs
     command: [ "/bin/bash", "/start-hdfs.sh" ]
     networks:
       hdfs_network:
@@ -24,6 +26,7 @@ services:
     user: root
     environment:
       - HADOOP_HOME=/opt/hadoop
+      - HADOOP_PREFIX=/opt/hadoop  # esto es nuevo
     volumes:
       - ./hadoop_datanode1:/opt/hadoop/data/dataNode
       - ./hadoop_config:/opt/hadoop/etc/hadoop
@@ -42,6 +45,7 @@ services:
     user: root
     environment:
       - HADOOP_HOME=/opt/hadoop
+      - HADOOP_PREFIX=/opt/hadoop  # esto es nuevo
     volumes:
       - ./hadoop_datanode2:/opt/hadoop/data/dataNode
       - ./hadoop_config:/opt/hadoop/etc/hadoop
@@ -59,13 +63,14 @@ services:
     user: root
     environment:
       - HADOOP_HOME=/opt/hadoop
+      - HADOOP_PREFIX=/opt/hadoop  # esto es nuevo
       - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
     volumes:
       - ./hadoop_config:/opt/hadoop/etc/hadoop
     depends_on:
       - namenode
     ports:
-      - "8088:8088"
+      - "8088:8088" #interfaz web de YARN
     command: [ "bash", "-c", "yarn resourcemanager" ]
     networks:
       hdfs_network:
@@ -78,6 +83,7 @@ services:
     user: root
     environment:
       - HADOOP_HOME=/opt/hadoop
+      - HADOOP_PREFIX=/opt/hadoop  # esto es nuevo
       - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
     volumes:
       - ./hadoop_config:/opt/hadoop/etc/hadoop
@@ -95,6 +101,7 @@ services:
     user: root
     environment:
       - HADOOP_HOME=/opt/hadoop
+      - HADOOP_PREFIX=/opt/hadoop  # esto es nuevo
       - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
     volumes:
       - ./hadoop_config:/opt/hadoop/etc/hadoop
@@ -104,7 +111,27 @@ services:
     networks:
       hdfs_network:
         ipv4_address: 172.20.0.7
-              
+
+  hive-server:
+    image: bde2020/hive:2.3.2-postgresql-metastore
+    container_name: hive-server
+    hostname: hive-server
+    environment:
+      - HIVE_HOME=/opt/hive
+      - HADOOP_HOME=/opt/hadoop 
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+      - HIVE_CONF_DIR=/opt/hive/conf
+    volumes:
+      - ./hive_data:/opt/hive/data
+      - ./hadoop_config:/opt/hadoop/etc/hadoop
+      - ./hive_config:/opt/hive/conf
+    ports:
+      - "10000:10000"  # Puerto Thrift para consultas SQL
+    depends_on:
+      - namenode
+      - resourcemanager
+    command: ["hive", "-service", "hiveserver2"]
+
 networks:
   hdfs_network:
     ipam:
