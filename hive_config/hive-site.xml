@@ -9,10 +9,10 @@
     </property>
     <property>
         <name>javax.jdo.option.ConnectionUserName</name>
-        <value>your_username</value>
+        <value>hive</value>
     </property>
     <property>
         <name>javax.jdo.option.ConnectionPassword</name>
-        <value>your_password</value>
+        <value>hive</value>
     </property>
 </configuration>
