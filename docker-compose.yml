@@ -6,8 +6,7 @@ services:
     user: root
     environment:
       - HADOOP_HOME=/opt/hadoop
-      - HADOOP_PREFIX=/opt/hadoop  # esto es nuevo
-
+      - CLUSTER_NAME=test
     volumes:
       - ./hadoop_namenode:/opt/hadoop/data/nameNode
       - ./hadoop_config:/opt/hadoop/etc/hadoop
@@ -26,7 +25,6 @@ services:
     user: root
     environment:
       - HADOOP_HOME=/opt/hadoop
-      - HADOOP_PREFIX=/opt/hadoop  # esto es nuevo
     volumes:
       - ./hadoop_datanode1:/opt/hadoop/data/dataNode
       - ./hadoop_config:/opt/hadoop/etc/hadoop
@@ -45,7 +43,6 @@ services:
     user: root
     environment:
       - HADOOP_HOME=/opt/hadoop
-      - HADOOP_PREFIX=/opt/hadoop  # esto es nuevo
     volumes:
       - ./hadoop_datanode2:/opt/hadoop/data/dataNode
       - ./hadoop_config:/opt/hadoop/etc/hadoop
@@ -56,6 +53,7 @@ services:
     networks:
       hdfs_network:
         ipv4_address: 172.20.0.4
+
   resourcemanager:
     image: apache/hadoop:3.3.5
     container_name: resourcemanager
@@ -63,7 +61,6 @@ services:
     user: root
     environment:
       - HADOOP_HOME=/opt/hadoop
-      - HADOOP_PREFIX=/opt/hadoop  # esto es nuevo
       - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
     volumes:
       - ./hadoop_config:/opt/hadoop/etc/hadoop
@@ -83,7 +80,6 @@ services:
     user: root
     environment:
       - HADOOP_HOME=/opt/hadoop
-      - HADOOP_PREFIX=/opt/hadoop  # esto es nuevo
       - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
     volumes:
       - ./hadoop_config:/opt/hadoop/etc/hadoop
@@ -101,7 +97,6 @@ services:
     user: root
     environment:
       - HADOOP_HOME=/opt/hadoop
-      - HADOOP_PREFIX=/opt/hadoop  # esto es nuevo
       - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
     volumes:
       - ./hadoop_config:/opt/hadoop/etc/hadoop
@@ -112,25 +107,44 @@ services:
       hdfs_network:
         ipv4_address: 172.20.0.7
 
+  hive-metastore-postgresql:
+    image: bde2020/hive-metastore-postgresql:2.3.0
+    container_name: hive-pg
+    environment:
+      POSTGRES_USER: hive
+      POSTGRES_PASSWORD: hive
+      POSTGRES_DB: metastore
+    networks:
+      hdfs_network:
+        ipv4_address: 172.20.0.8
+
+  hive-metastore:
+    image: bde2020/hive:2.3.2-postgresql-metastore
+    container_name: hive-meta
+    command: /opt/hive/bin/hive --service metastore
+    environment:
+      SERVICE_PRECONDITION: "namenode:50070 datanode1:50075 datanode2:50075 hive-metastore-postgresql:5432"
+    ports:
+      - "9083:9083"
+    depends_on:
+      - hive-metastore-postgresql
+    networks:
+      hdfs_network:
+        ipv4_address: 172.20.0.9
+
   hive-server:
     image: bde2020/hive:2.3.2-postgresql-metastore
     container_name: hive-server
-    hostname: hive-server
     environment:
-      - HIVE_HOME=/opt/hive
-      - HADOOP_HOME=/opt/hadoop 
-      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
-      - HIVE_CONF_DIR=/opt/hive/conf
-    volumes:
-      - ./hive_data:/opt/hive/data
-      - ./hadoop_config:/opt/hadoop/etc/hadoop
-      - ./hive_config:/opt/hive/conf
+      HIVE_CORE_CONF_javax_jdo_option_ConnectionURL: "jdbc:postgresql://hive-metastore/metastore"
+      SERVICE_PRECONDITION: "hive-metastore:9083"
     ports:
-      - "10000:10000"  # Puerto Thrift para consultas SQL
+      - "10000:10000"
     depends_on:
-      - namenode
-      - resourcemanager
-    command: ["hive", "-service", "hiveserver2"]
+      - hive-metastore
+    networks:
+      hdfs_network:
+        ipv4_address: 172.20.0.10
 
 networks:
   hdfs_network:
